@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Maquinarias</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema completo para gestión de maquinarias y registros de mantenimiento">
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Maquinarias">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- PWA Install Banner -->
+    <div id="installBanner" class="install-banner" style="display: none;">
+        <div class="install-content">
+            <i class="fas fa-download"></i>
+            <span>¡Instala la app para mejor experiencia!</span>
+            <button id="installBtn" class="btn btn-primary btn-sm">Instalar</button>
+            <button id="dismissInstall" class="btn-close">&times;</button>
+        </div>
+    </div>
+
+    <!-- PWA Connection Status -->
+    <div id="connectionStatus" class="connection-status" style="display: none;">
+        <i class="fas fa-wifi"></i>
+        <span id="statusText">Sin conexión - Trabajando offline</span>
+    </div>
+
+    <div id="mainApp" class="main-app">
+        <header class="header">
+            <div class="header-left">
+                <h1>🚜 Sistema de Gestión de Maquinarias</h1>
+            </div>
+            <div class="header-right">
+                <button onclick="showDashboard()" class="btn btn-info btn-sm">
+                    <i class="fas fa-home"></i> Panel Principal
+                </button>
+                <!-- PWA Sync Button -->
+                <button id="syncBtn" onclick="syncData()" class="btn btn-warning btn-sm" style="display: none;">
+                    <i class="fas fa-sync"></i> Sincronizar
+                </button>
+            </div>
+        </header>
+
+        <main id="dashboard" class="dashboard" style="display: block;">
+            <div class="summary-section">
+                <h3>📊 Resumen de Maquinarias</h3>
+                <div id="summaryCards" class="summary-cards">
+                    <div class="summary-card" onclick="filtrarPorEstado('OPERATIVO')">
+                        <div class="summary-icon operativas">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h3 id="operativasCount">0</h3>
+                            <p>Operativas</p>
+                            <small>Máquinas funcionando</small>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card" onclick="filtrarPorEstado('INOPERATIVO')">
+                        <div class="summary-icon inoperativas">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h3 id="inoperativasCount">0</h3>
+                            <p>Inoperativas</p>
+                            <small>Requieren atención</small>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card" onclick="filtrarPorEstado('STANDBY')">
+                        <div class="summary-icon standby">
+                            <i class="fas fa-pause-circle"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h3 id="standbyCount">0</h3>
+                            <p>En Standby</p>
+                            <small>En espera</small>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card" onclick="mostrarModulo('maquinarias')">
+                        <div class="summary-icon total">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div class="summary-content">
+                            <h3 id="totalCount">0</h3>
+                            <p>Total</p>
+                            <small>Ver todas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modules-section">
+                <h3>🚜 Gestión de Maquinarias</h3>
+                <div class="modules-grid">
+                    <div class="module-card" onclick="mostrarModulo('maquinarias')">
+                        <div class="module-icon">🚜</div>
+                        <div class="module-content">
+                            <h3>Maquinarias</h3>
+                        </div>
+                    </div>
+                    
+                    <!-- NUEVA TARJETA: Módulo de Mantenimientos -->
+                    <div class="module-card" onclick="mostrarModulo('mantenimientos')">
+                        <div class="module-icon">🔧</div>
+                        <div class="module-content">
+                            <h3>Registros de Mantenimientos</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <main id="moduleView" class="module-view" style="display: none;">
+            <div class="module-header">
+                <h2 id="moduleTitle">Maquinarias</h2>
+                <div class="module-actions">
+                    <button onclick="nuevoRegistro()" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+
+            <div class="module-content">
+                <div class="filters-section">
+                    <input type="text" id="searchInput" placeholder="Buscar..." class="search-input">
+                    <!-- FILTRO MODIFICADO: Ahora maneja ambos módulos -->
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">Todos los estados</option>
+                        <option value="OPERATIVO">Operativo</option>
+                        <option value="INOPERATIVO">Inoperativo</option>
+                        <option value="STANDBY">Standby</option>
+                        <option value="CORRECTIVO">Correctivo</option>
+                        <option value="PREVENTIVO">Preventivo</option>
+                        <option value="PREDICTIVO">Predictivo</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table id="dataTable" class="data-table">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Cargando...</p>
+        </div>
+    </div>
+
+    <!-- Modal de Formulario (existente) -->
+    <div id="formModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="formModalTitle">Nuevo Registro</h3>
+                <button class="btn-close" onclick="cerrarModal('formModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="dynamicForm">
+                    <div id="formFields"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('formModal')">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarFormulario()">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Vista Completa -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="viewModalTitle">Vista Completa</h3>
+                <button class="btn-close" onclick="cerrarModal('viewModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="viewFields"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('viewModal')">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-warning" onclick="editarDesdeVista()">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Scripts - Orden importante -->
+    <script src="indexeddb-manager.js"></script>
+    <script src="offline-manager.js"></script>
+    <script src="config.js"></script>
+    <script src="script-maquinarias.js"></script>
+    <script src="script-mantenimientos.js"></script>
+    <script src="script-general.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Registro del Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registrado:', registration);
+                    })
+                    .catch((error) => {
+                        console.log('❌ Error registrando Service Worker:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBanner').style.display = 'block';
+        });
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response: ${outcome}`);
+                deferredPrompt = null;
+                document.getElementById('installBanner').style.display = 'none';
+            }
+        });
+
+        document.getElementById('dismissInstall').addEventListener('click', () => {
+            document.getElementById('installBanner').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
